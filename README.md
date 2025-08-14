@@ -42,11 +42,14 @@ This is an ESP-IDF project for reading **temperature, pressure, and humidity** f
 
 ---
 ## File Structure
+```
 main/
-├── bme280.c # BME280 driver implementation
-├── bme280.h # BME280 driver public API
-├── app_main.c # Stage 1 main: scan, init, read, print
-└── CMakeLists.txt # idf_component_register(...)
+├── bme280.c        # BME280 driver implementation
+├── bme280.h        # BME280 driver public API
+├── app_main.c      # Stage 1 main: scan, init, read, print
+└── CMakeLists.txt  # idf_component_register(...)
+```
+
 
 ## Building & Flashing
 ```bash

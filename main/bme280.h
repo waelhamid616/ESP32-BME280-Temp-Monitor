@@ -1,11 +1,10 @@
-
-//.h file starts here 
-
 /*
- * BME280 driver – public API
- * Author: Wael Hamid
- * Date: Aug 9, 2025
+ * BME280 Driver (public API)
+ * Pin/I2C config macros, calibration struct, and function prototypes for init,
+ * configuration, raw reads, and compensated T/P/H accessors.
+ * Author: Wael Hamid  |  Date: 2025-08-09
  */
+
 
 #ifndef BME280_H
 #define BME280_H

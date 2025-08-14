@@ -1,5 +1,9 @@
-
-//.c file starts here 
+/*
+ * BME280 Driver (implementation)
+ * I2C transactions, init/reset, calibration reads, raw reads, and compensation
+ * (double-precision) per Bosch datasheet. Private helpers kept file-local.
+ * Author: Wael Hamid  |  Date: 2025-08-09
+ */
 
 
 #include "bme280.h"
@@ -254,8 +258,6 @@ static int16_t sign_extend_12(uint16_t v)
        return ESP_OK;
     }
 
-
-
 /**
  * @brief Read raw ADC values for temperature, pressure, and humidity.
  *
@@ -285,8 +287,6 @@ esp_err_t bme280_read_raw(int32_t *adc_T, int32_t *adc_P, int32_t *adc_H)
 
     return ESP_OK;
 }
-
-
 
 /**
  * @brief Convert raw temperature reading to degrees Celsius (double precision).
