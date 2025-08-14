@@ -1,0 +1,15 @@
+# ESP-IDF build output
+/build/
+sdkconfig.old
+
+# VSCode settings
+.vscode/
+.devcontainer/
+
+# Temporary files
+*.log
+*.pyc
+__pycache__/
+
+# IDF-specific
+pytest_hello_world
