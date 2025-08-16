@@ -11,13 +11,41 @@
 #include "freertos/task.h"
 #include "esp_err.h"
 #include "esp_log.h"
-#include "driver/i2c.h"   // scan done in main 
+#include "driver/i2c.h"    // scan done in main 
 
 #include "bme280.h"       // driver public API (macros + prototypes)
+
+#include "wifi.h"
+#include "http_server.h"
+#include "http_client_ext.h"
+#include <math.h>   // for NAN
+
 static const char *TAG = "APP_MAIN"; // for logs inside app_main.c
+
+// start here 
+//static float g_outside_c = NAN;  // updated by the task below
+static weather_t g_outside = { NAN, NAN };
+
+
+static void outside_temp_task(void *arg)
+{
+    while (1) {
+        g_outside = fetch_outside_current();      // HTTPS API call (Open-Meteo)
+        vTaskDelay(pdMS_TO_TICKS(6000));          // update every 60 s
+    }
+}
+
 
 void app_main(void)
 {
+    
+    // 0. Bring up Wi-Fi, time, and web server ===
+    ESP_ERROR_CHECK(wifi_start_station());    // connect to your router (logs GOT_IP)
+    web_start();                             // starts HTTP server at "/"
+
+    // Start the background task that fetches outside temperature
+    xTaskCreate(outside_temp_task, "outside_temp_task", 4096, NULL, 5, NULL);
+
 
     // 1. Call the i2c initilaizer 
     ESP_ERROR_CHECK(bme_i2c_master_init());
@@ -69,6 +97,8 @@ void app_main(void)
         double P_Pa = BME280_compensate_P_double(raw_P);  // Pa
         double H_RH = bme280_compensate_H_double(raw_H); // %RH
         printf("T=%.2f °C  P=%.2f hPa  H=%.1f %%RH\n", T_C, P_Pa/100.0, H_RH);
+        //publish latest readings to the web page ===
+        web_set_readings((float)T_C, g_outside.temp,(float)H_RH, g_outside.humid);
 
         vTaskDelayUntil(&last_wake, period_ticks); // wait until last_wake + period_ticks, adjusting for time already spent
     }
