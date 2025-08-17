@@ -23,7 +23,6 @@
 static const char *TAG = "APP_MAIN"; // for logs inside app_main.c
 
 // start here 
-//static float g_outside_c = NAN;  // updated by the task below
 static weather_t g_outside = { NAN, NAN };
 
 
@@ -31,16 +30,24 @@ static void outside_temp_task(void *arg)
 {
     while (1) {
         g_outside = fetch_outside_current();      // HTTPS API call (Open-Meteo)
-        vTaskDelay(pdMS_TO_TICKS(6000));          // update every 60 s
+        vTaskDelay(pdMS_TO_TICKS(6000));          // update every 6 sec
     }
 }
 
 
+/*
+ * Function: app_main
+ * ESP-IDF application entry point.
+ * - Initializes Wi-Fi, and HTTP server
+ * - Launches task to fetch outside weather
+ * - Scans I2C bus and initializes BME280 sensor
+ * - Continuously reads T/P/H every ~1s and updates web page
+ */
 void app_main(void)
 {
     
     // 0. Bring up Wi-Fi, time, and web server ===
-    ESP_ERROR_CHECK(wifi_start_station());    // connect to your router (logs GOT_IP)
+    ESP_ERROR_CHECK(wifi_start_station());    // connect to router (logs GOT_IP)
     web_start();                             // starts HTTP server at "/"
 
     // Start the background task that fetches outside temperature

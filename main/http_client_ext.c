@@ -1,4 +1,12 @@
-#include "http_client_ext.h"   // Your custom wrapper/helpers for HTTP (project specific)
+/*
+ * HTTP client (implementation) for Open-Meteo current weather.
+ * Handles HTTPS GET with CRT bundle, dynamic buffer read, and minimal JSON scan.
+ * Exposes fetch_outside_current(); includes a string-skipping numeric finder.
+ * Author: Wael Hamid  |  Date: 2025-08-12
+ */
+
+
+#include "http_client_ext.h"   // Custom wrapper/helpers for HTTP (project specific)
 #include "app_config.h"        // Contains config macros like OPEN_METEO_URL
 #include "esp_http_client.h"   // ESP-IDF's HTTP client library
 #include "esp_crt_bundle.h"    // Built-in SSL/TLS CA certificate bundle (for HTTPS)
@@ -8,16 +16,18 @@
 #include <errno.h>             // errno for error checking with strtod
 #include <ctype.h>             // for isspace
 
-
-// Helper: find the first number value after a given key in a JSON string
-// Example: find_key_number(body, "\"temperature_2m\"") --> returns a double
-// --- replace the old helper with this ---
-
-static const char* skip_ws(const char* p) {
-    while (*p==' ' || *p=='\t' || *p=='\n' || *p=='\r') ++p;
-    return p;
-}
-
+/**
+ * @brief Search for a numeric value in a JSON-like string by key, skipping strings.
+ *
+ * Finds the first occurrence of the given key, locates the numeric value after
+ * the colon, and parses it as a double. If the value is enclosed in quotes,
+ * the search continues to avoid returning strings.
+ *
+ * @param text Pointer to the JSON/text buffer.
+ * @param key  Key string to search for (e.g., "\"temperature_2m\"").
+ * @return Parsed number as double on success, NAN if not found or not a number.
+ *
+ */
 
 static double find_key_number_skip_strings(const char *text, const char *key)
 {
@@ -26,8 +36,6 @@ static double find_key_number_skip_strings(const char *text, const char *key)
     { 
         return NAN;
     }
-
-    // double v = find_key_number_skip_strings(buf, "\"temperature_2m\"");
 
     const char *search = text;
     const char *ptr;
@@ -61,38 +69,20 @@ static double find_key_number_skip_strings(const char *text, const char *key)
         // Not a number here → advance search window and try next occurrence
         search = ptr + 1;
     }
-
-/*
-
-    for (;;) {
-        const char *p = strstr(search, key);
-        if (!p) return NAN;                         // no more occurrences
-
-        const char *colon = strchr(p, ':');
-        if (!colon) return NAN;
-
-        const char *val = skip_ws(colon + 1);      // move to value
-
-        if (*val == '"') {                       // this occurrence is a string -> skip it
-            search = colon + 1;                 // continue searching after this colon
-            continue;
-        }
-
-        char *endptr = NULL;
-        errno = 0;
-        double v = strtod(val, &endptr);        // parse number
-        if (val != endptr && errno == 0) return v;  // success
-        // Not a valid number, continue the search
-        search = colon + 1;
-    }
-
-    */
-        
 }
 
 
+/**
+ * @brief Fetch outside temperature and humidity from Open-Meteo API.
+ *
+ * Performs an HTTPS GET request using the ESP-IDF HTTP client. Reads the
+ * response into a dynamically allocated buffer, parses JSON, and extracts
+ * temperature_2m (°C) and relative_humidity_2m (%RH).
+ *
+ * @return weather_t struct with temp and humid fields set, or NAN values on error.
+ *
+ */
 
-// Fetch outside temperature (Celsius) & Humididty(%RH)from Open-Meteo API
 weather_t fetch_outside_current(void)
 {
     weather_t out = { NAN, NAN };   // starting clean, safe to return on any error
@@ -107,7 +97,6 @@ weather_t fetch_outside_current(void)
         .crt_bundle_attach = esp_crt_bundle_attach, // attach default CA bundle for HTTPS
         .method = HTTP_METHOD_GET,          // GET request
     };
-
 
     esp_http_client_handle_t c = esp_http_client_init(&cfg); // create client
 
@@ -181,8 +170,8 @@ weather_t fetch_outside_current(void)
     
     }
 
-    free(buf);                                              // free buffer
-    esp_http_client_close(c);                              // close connection
-    esp_http_client_cleanup(c);                           // free client
+    free(buf);                                        // free buffer
+    esp_http_client_close(c);                        // close connection
+    esp_http_client_cleanup(c);                     // free client
     return out;                                    // return temperature (or NAN on failure)
 }

@@ -13,3 +13,6 @@ __pycache__/
 
 # IDF-specific
 pytest_hello_world
+
+# ignore secrets
+.env
