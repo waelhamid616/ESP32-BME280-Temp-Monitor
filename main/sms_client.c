@@ -1,84 +1,121 @@
 // sms_client.c
 #include "sms_client.h"
 #include "esp_http_client.h"
-#include "esp_crt_bundle.h"
+#include "esp_crt_bundle.h"   // Use the Mozilla root CA bundle (no site-specific cert needed)
 #include "esp_log.h"
 #include "sdkconfig.h"
-#include "certs.h"
 #include <stdio.h>
 #include <string.h>
 
-static const char *TAG= "sms";
+static const char *TAG = "sms";
 
-esp_err_t sms_send_alert(const char *body){
+// url_encode() must percent-encode reserved characters for application/x-www-form-urlencoded.
+// You already have/plan this helper elsewhere; we just declare it here.
+extern void url_encode(const char *in, char *out, size_t out_sz);
+
+esp_err_t sms_send_alert(const char *body) {
+    // ------------------------------------------------------------------------
+    // Build the Twilio Messages API endpoint:
+    //   https://api.twilio.com/2010-04-01/Accounts/{AccountSid}/Messages.json
+    // We inject the Account SID from Kconfig.
+    // ------------------------------------------------------------------------
     char url[200];
-    snprintf(url,sizeof url, "https://api.twilio.com/2010-04-01/Accounts/%s/Messages.json",
-    CONFIG_TWILIO_ACCOUNT_SID); // saves the twilo url into "url"
-    // retuns the number of characters saved.
+    snprintf(url, sizeof url,
+             "https://api.twilio.com/2010-04-01/Accounts/%s/Messages.json",
+             CONFIG_TWILIO_ACCOUNT_SID);  // Saves the full Twilio URL into `url`
 
-    // URL-encode the message body
-    char body_enc[256];
-    //body_enc is the destination buffer the encoded meassage will be stored in
-    url_encode(body, body_enc, sizeof body_enc);
+    // ------------------------------------------------------------------------
+    // URL-encode all form fields for "application/x-www-form-urlencoded".
+    // IMPORTANT:
+    //   - In form-encoding, '+' means space, so phone numbers like +1604555...
+    //     must be encoded to %2B (your url_encode should do this).
+    //   - We encode To, From, and Body to be safe.
+    // ------------------------------------------------------------------------
+    char to_enc[64], from_enc[64], body_enc[256];
+    url_encode(CONFIG_ALERT_TO_NUMBER,     to_enc,   sizeof to_enc);    // destination number
+    url_encode(CONFIG_TWILIO_FROM_NUMBER,  from_enc, sizeof from_enc);  // your Twilio number (sender)
+    url_encode(body,                        body_enc, sizeof body_enc);  // SMS text payload
 
-    // Build x-www-form-url encoded form body
+    // ------------------------------------------------------------------------
+    // Build the POST body in classic HTML form format:
+    //   To=...&From=...&Body=...
+    // `n` is the final length, used by the HTTP client as Content-Length.
+    // ------------------------------------------------------------------------
     char form[512];
-    // n is length of the final HTTP body string (form), used as Content-Length.
     int n = snprintf(form, sizeof form,
-                 "To=%s&From=%s&Body=%s",
-                 CONFIG_ALERT_TO_NUMBER,
-                 CONFIG_TWILIO_FROM_NUMBER,
-                 body_enc);
+                     "To=%s&From=%s&Body=%s",
+                     to_enc, from_enc, body_enc);
 
-
-    // cleint init
+    // ------------------------------------------------------------------------
+    // HTTP client configuration:
+    //   - POST method
+    //   - Basic Auth (username = Account SID, password = Auth Token)
+    //   - TLS trust via the built-in certificate bundle (no per-site cert)
+    //   - Reasonable timeout
+    // ------------------------------------------------------------------------
     esp_http_client_config_t cfg = {
-        .url= url,
-        .crt_bundle_attach= esp_crt_bundle_attach,
-        .timeout_ms= 10000,
+        .url = url,
+        .method = HTTP_METHOD_POST,                 // Explicitly do a POST
+        .auth_type = HTTP_AUTH_TYPE_BASIC,          // Twilio uses HTTP Basic Auth
+        .username = CONFIG_TWILIO_ACCOUNT_SID,      // Username = Account SID
+        .password = CONFIG_TWILIO_AUTH_TOKEN,       // Password = Auth Token
+        .crt_bundle_attach = esp_crt_bundle_attach, // Use Mozilla CA bundle
+        .timeout_ms = 10000,                        // 10-second network timeout
     };
 
-    //crate the client handle 
+    // Create the HTTP client handle (opaque object that holds connection state)
     esp_http_client_handle_t h = esp_http_client_init(&cfg);
     if (!h) return ESP_FAIL;
 
-    //set request parameters 
-    //The data I’m sending in the body is in form-encoded format (like HTML forms).
+    // ------------------------------------------------------------------------
+    // Set request headers and body:
+    //   - Content-Type informs Twilio that we're sending form-encoded fields.
+    //   - Post field sets the body pointer + length (Content-Length is derived).
+    // ------------------------------------------------------------------------
     esp_http_client_set_header(h, "Content-Type", "application/x-www-form-urlencoded");
-    esp_http_client_set_post_field(h, form, n); //everything needed here 
+    esp_http_client_set_post_field(h, form, n);  // Everything needed is in `form`
 
-    //perfrom the client request 
+    // ------------------------------------------------------------------------
+    // Perform the HTTP request:
+    //   - Handles DNS, TCP, TLS, Basic Auth handshake, send, and receive.
+    //   - Returns ESP_OK only if transport and TLS succeeded and we got a
+    //     valid HTTP response from the server.
+    // ------------------------------------------------------------------------
     esp_err_t err = esp_http_client_perform(h);
 
-    // If the HTTP client failed to perform the request (network error, TLS error, etc.)
-    if (err != ESP_OK) { 
-        ESP_LOGE(TAG, "HTTP perform: %s", esp_err_to_name(err)); // Log the error string name (e.g. "ESP_ERR_HTTP_CONNECT")
+    // If transport/TLS failed (network error, handshake problem, etc.), log and bail.
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "HTTP perform: %s", esp_err_to_name(err));
+        esp_http_client_cleanup(h);
+        return err;
+    }
 
-         goto out; //jump to out directly and skip the rest 
-         }
-
-    // Get the HTTP response status code (e.g. 200, 201, 400, 500)
-    int status = esp_http_client_get_status_code(h); 
-
-    // If the status is NOT 2xx (e.g., 200 OK or 201 Created),
-    // then the request failed from Twilio’s perspective.
+    // ------------------------------------------------------------------------
+    // Check HTTP status code:
+    //   - Twilio returns 201 Created on success for /Messages.json
+    //   - Any non-2xx code indicates an API-side error (e.g., auth, params, etc.)
+    // ------------------------------------------------------------------------
+    int status = esp_http_client_get_status_code(h);
     if (status / 100 != 2) {
-        //read the responce back, usually sent in json 
-        char buf[256]; // 256 bytes 
+        // Read response body (usually JSON error with `message`/`code`)
+        char buf[256];
         int r = esp_http_client_read_response(h, buf, sizeof buf - 1);
 
-        if (r>0){ //if something was read back 
-            buf[r]=0; ESP_LOGE(TAG, "Twilio %d: %s", status, buf); // Add a null terminator so buf is a proper C string.
+        if (r > 0) {
+             buf[r] = 0; ESP_LOGE(TAG, "Twilio %d: %s", status, buf);
          }
-        else    { //nothing was read back 
-             ESP_LOGE(TAG, "Twilio %d (no body)", status); }
+
+        else        {             
+            ESP_LOGE(TAG, "Twilio %d (no body)", status);
+         }
+
         err = ESP_FAIL;
+        
     } else {
-        // success (201 Created expected)
-        ESP_LOGI(TAG, "Twilio OK: %d", status);
+        ESP_LOGI(TAG, "Twilio OK: %d", status);  // Typically 201
     }
-out:
-    //perform cleanup 
+
+    // Always cleanup the client handle to free resources/sockets
     esp_http_client_cleanup(h);
     return err;
 }
