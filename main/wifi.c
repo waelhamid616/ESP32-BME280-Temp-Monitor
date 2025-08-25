@@ -16,6 +16,9 @@
 #include "esp_netif.h"
 #include <string.h>           
 #include "sdkconfig.h"
+#include <time.h>
+#include "esp_sntp.h"
+
 
 
 static const char *TAG = "wifi";
@@ -85,7 +88,7 @@ esp_err_t wifi_start_station(void) {
  * @return true if station has valid IPv4, false otherwise.
  */
 
-static inline bool have_ip(void) {                                       // true if Wi-Fi STA has an IPv4
+bool have_ip(void) {                                              // true if Wi-Fi STA has an IPv4
     esp_netif_t *sta = esp_netif_get_handle_from_ifkey("WIFI_STA_DEF"); // default Wi-Fi station netif
     if (!sta) return false;                                            // netif not created/available yet
     esp_netif_ip_info_t ip= {0};                                      // holder for IPv4 info
@@ -103,7 +106,7 @@ static inline bool have_ip(void) {                                       // true
  * @return true if system time is valid, false otherwise.
  */
 
-static inline bool time_is_set(void) {      // true if system clock looks valid
+bool time_is_set(void) {             // true if system clock looks valid
     time_t now = 0;                        // initialize to epoch
     time(&now);                           // now holds the current epoch seconds after call 
     return now > 1700000000;             // > ~Nov 2023 ⇒ treat as “real” time
@@ -115,7 +118,7 @@ static inline bool time_is_set(void) {      // true if system clock looks valid
  * Enables SNTP in poll mode with "time.google.com" as the server,
  * and initializes the SNTP service if not already running.
  */
-static inline void start_sntp_once(void) {
+void start_sntp_once(void) {
     if (!esp_sntp_enabled()) {
         esp_sntp_setoperatingmode(ESP_SNTP_OPMODE_POLL);
         esp_sntp_setservername(0, "time.google.com");   

@@ -8,6 +8,9 @@
 
 #pragma once
 #include "esp_err.h"
+#include <stdbool.h> 
+
 esp_err_t wifi_start_station(void);
-
-
+bool have_ip(void);
+bool time_is_set(void);
+void start_sntp_once(void);
