@@ -1,4 +1,4 @@
-# --- Load Wi-Fi creds from .env file ---
+# --- Load Wi‑Fi creds from .env (at project root) ---
 set(DOTENV_PATH "${CMAKE_SOURCE_DIR}/.env")
 
 if(EXISTS "${DOTENV_PATH}")
@@ -13,10 +13,10 @@ if(EXISTS "${DOTENV_PATH}")
 endif()
 
 # Defaults if not set
-if(NOT WIFI_SSID)
+if(NOT DEFINED WIFI_SSID)
     set(WIFI_SSID "")
 endif()
-if(NOT WIFI_PASS)
+if(NOT DEFINED WIFI_PASS)
     set(WIFI_PASS "")
 endif()
 
@@ -27,7 +27,10 @@ idf_component_register(
     "http_server.c"
     "http_client_ext.c"
     "bme280.c"
-  INCLUDE_DIRS "."
+    "sms_client.c"
+    "alert_eval.c"
+  INCLUDE_DIRS
+    "."
   REQUIRES
     driver
     esp_wifi
@@ -38,13 +41,14 @@ idf_component_register(
     esp_http_client
     esp-tls
     esp_https_server
+    esp_timer
 )
 
-# Pass values into code
+# Pass values into code (visible as preprocessor macros)
 target_compile_definitions(${COMPONENT_LIB} PRIVATE
     CONFIG_WIFI_SSID="${WIFI_SSID}"
     CONFIG_WIFI_PASS="${WIFI_PASS}"
 )
 
-# Show SSID at configure time (but not password!)
+# Show SSID at configure time (but not the password)
 message(STATUS "WIFI_SSID='${WIFI_SSID}' (from .env)")

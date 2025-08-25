@@ -1,0 +1,78 @@
+CMake Warning (dev) in CMakeLists.txt:
+  No project() command is present.  The top-level CMakeLists.txt file must
+  contain a literal, direct call to the project() command.  Add a line of
+  code such as
+
+    project(ProjectName)
+
+  near the top of the file, but after cmake_minimum_required().
+
+  CMake is pretending there is a "project(Project)" command on the first
+  line.
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+CMake Warning (dev) in CMakeLists.txt:
+  cmake_minimum_required() should be called prior to this top-level project()
+  call.  Please see the cmake-commands(7) manual for usage documentation of
+  both commands.
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+CMake Error at C:/Espressif/tools/cmake/3.30.2/share/cmake-3.30/Modules/CMakeTestCCompiler.cmake:67 (message):
+  The C compiler
+
+    "C:/Espressif/tools/esp-clang/15.0.0-23786128ae/esp-clang/bin/clang.exe"
+
+  is not able to compile a simple test program.
+
+  It fails with the following output:
+
+    Change Dir: 'C:/Users/Admin/esp/I2C_Scanner/main/build/CMakeFiles/CMakeScratch/TryCompile-a3bs28'
+    
+    Run Build Command(s): C:/Espressif/tools/ninja/1.12.1/ninja.exe -v cmTC_b0c68
+    [1/2] C:\Espressif\tools\esp-clang\15.0.0-23786128ae\esp-clang\bin\clang.exe    -MD -MT CMakeFiles/cmTC_b0c68.dir/testCCompiler.c.obj -MF CMakeFiles\cmTC_b0c68.dir\testCCompiler.c.obj.d -o CMakeFiles/cmTC_b0c68.dir/testCCompiler.c.obj -c C:/Users/Admin/esp/I2C_Scanner/main/build/CMakeFiles/CMakeScratch/TryCompile-a3bs28/testCCompiler.c
+    [2/2] C:\WINDOWS\system32\cmd.exe /C "cd . && C:\Espressif\tools\esp-clang\15.0.0-23786128ae\esp-clang\bin\clang.exe   CMakeFiles/cmTC_b0c68.dir/testCCompiler.c.obj -o cmTC_b0c68.exe -Wl,--out-implib,libcmTC_b0c68.dll.a -Wl,--major-image-version,0,--minor-image-version,0  -lkernel32 -luser32 -lgdi32 -lwinspool -lshell32 -lole32 -loleaut32 -luuid -lcomdlg32 -ladvapi32 && cd ."
+    FAILED: cmTC_b0c68.exe 
+    C:\WINDOWS\system32\cmd.exe /C "cd . && C:\Espressif\tools\esp-clang\15.0.0-23786128ae\esp-clang\bin\clang.exe   CMakeFiles/cmTC_b0c68.dir/testCCompiler.c.obj -o cmTC_b0c68.exe -Wl,--out-implib,libcmTC_b0c68.dll.a -Wl,--major-image-version,0,--minor-image-version,0  -lkernel32 -luser32 -lgdi32 -lwinspool -lshell32 -lole32 -loleaut32 -luuid -lcomdlg32 -ladvapi32 && cd ."
+    lld: error: unable to find library -lkernel32
+    lld: error: unable to find library -luser32
+    lld: error: unable to find library -lgdi32
+    lld: error: unable to find library -lwinspool
+    lld: error: unable to find library -lshell32
+    lld: error: unable to find library -lole32
+    lld: error: unable to find library -loleaut32
+    lld: error: unable to find library -luuid
+    lld: error: unable to find library -lcomdlg32
+    lld: error: unable to find library -ladvapi32
+    lld: error: unable to find library -lmingw32
+    lld: error: unable to find library -lunwind
+    lld: error: unable to find library -lmoldname
+    lld: error: unable to find library -lmingwex
+    lld: error: unable to find library -lmsvcrt
+    lld: error: unable to find library -ladvapi32
+    lld: error: unable to find library -lshell32
+    lld: error: unable to find library -luser32
+    lld: error: unable to find library -lkernel32
+    lld: error: unable to find library -lmingw32
+    lld: error: too many errors emitted, stopping now
+    clang: error: linker command failed with exit code 1 (use -v to see invocation)
+    ninja: build stopped: subcommand failed.
+    
+    
+
+  
+
+  CMake will not be able to correctly generate this project.
+Call Stack (most recent call first):
+  CMakeLists.txt
+
+
+CMake Warning (dev) in CMakeLists.txt:
+  No cmake_minimum_required command is present.  A line of code such as
+
+    cmake_minimum_required(VERSION 3.30)
+
+  should be added at the top of the file.  The version specified may be lower
+  if you wish to support older CMake versions for this project.  For more
+  information run "cmake --help-policy CMP0000".
+This warning is for project developers.  Use -Wno-dev to suppress it.
+

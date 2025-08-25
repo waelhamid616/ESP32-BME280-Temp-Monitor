@@ -1,4 +1,11 @@
-// sms_client.c
+/*
+ * SMS client (implementation).
+ * - Provides sms_send_alert() to send SMS via Twilio REST API.
+ * - Uses esp_http_client with TLS (Mozilla CA bundle) and Basic Auth.
+ * - Includes a minimal URL encoder for form-encoded fields.
+ * Author: Wael Hamid  |  Date: 2025-08-20
+ */
+
 #include "sms_client.h"
 #include "esp_http_client.h"
 #include "esp_crt_bundle.h"   // Use the Mozilla root CA bundle (no site-specific cert needed)

@@ -119,7 +119,7 @@ esp_err_t sms_eval_alert(double T_C) {
 
     // Cold warning: (Cold < T_C <= Cold_Warn) AND not on 30-min cooldown
     if ((!a_tick) && (T_C > Cold) && (T_C <= Cold_Warn)) {
-        snprintf(msg, sizeof msg, "Cold Warning: %.1fC (<= %.1fC).", T_C, Cold_Warn);
+        snprintf(msg, sizeof msg, "Cold Warning: Inside temperature %.1fC is below %.1fC.", T_C, Cold_Warn);
         a_tick = 1;  // Enter 30-minute cooldown for warnings
         ESP_ERROR_CHECK(esp_timer_start_once(a_handle, THIRTY_MIN_US));
         return sms_send_alert(msg);
@@ -127,7 +127,7 @@ esp_err_t sms_eval_alert(double T_C) {
 
     // Cold alert: (T_C <= Cold) AND not on 60-min cooldown
     if ((!b_tick) && (T_C <= Cold)) {
-        snprintf(msg, sizeof msg, "Cold ALERT: %.1fC (<= %.1fC).", T_C, Cold);
+        snprintf(msg, sizeof msg, "Cold Alert: Inside temperature %.1fC is below %.1fC.", T_C, Cold);
         b_tick = 1;  // Enter 60-minute cooldown for alerts
         ESP_ERROR_CHECK(esp_timer_start_once(b_handle, ONE_HOUR_US));
         return sms_send_alert(msg);
@@ -135,7 +135,7 @@ esp_err_t sms_eval_alert(double T_C) {
 
     // Hot warning: (Hot_Warn <= T_C < Hot) AND not on 30-min cooldown
     if ((!a_tick) && (T_C >= Hot_Warn) && (T_C < Hot)) {
-        snprintf(msg, sizeof msg, "Hot Warning: %.1fC (>= %.1fC).", T_C, Hot_Warn);
+        snprintf(msg, sizeof msg, "Hot Warning: Inside temperature %.1fC is above %.1fC.", T_C, Hot_Warn);
         a_tick = 1;  // Enter 30-minute cooldown for warnings
         ESP_ERROR_CHECK(esp_timer_start_once(a_handle, THIRTY_MIN_US));
         return sms_send_alert(msg);
@@ -143,7 +143,7 @@ esp_err_t sms_eval_alert(double T_C) {
 
     // Hot alert: (T_C >= Hot) AND not on 60-min cooldown
     if ((!b_tick) && (T_C >= Hot)) {
-        snprintf(msg, sizeof msg, "Hot ALERT: %.1fC (>= %.1fC).", T_C, Hot);
+        snprintf(msg, sizeof msg, "Hot Alert: Inside temperature %.1fC is above %.1fC.", T_C, Hot);
         b_tick = 1;  // Enter 60-minute cooldown for alerts
         ESP_ERROR_CHECK(esp_timer_start_once(b_handle, ONE_HOUR_US));
         return sms_send_alert(msg);

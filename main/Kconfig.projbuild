@@ -1,0 +1,24 @@
+#This config menu only needs to filled out once on the first build
+# Note: Kconfig.h will be crated every build but hidden once it's force included
+menu "ESP32 Smart Climate Monitor - WIFI & SMS Settings"
+
+config WIFI_SSID
+    string "wifi account"
+
+config WIFI_PASSWORD
+    string "wifi password"
+
+config TWILIO_ACCOUNT_SID
+    string "Twilio Account SID"
+
+config TWILIO_AUTH_TOKEN
+    string "Twilio Auth Token"
+
+config TWILIO_FROM_NUMBER
+    string "Twilio From Number (e.g., +15551234567)"
+
+config ALERT_TO_NUMBER
+    string "Alert To Number (e.g., +17789386637)"
+
+endmenu
+

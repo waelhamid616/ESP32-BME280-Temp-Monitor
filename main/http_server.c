@@ -63,8 +63,8 @@ static esp_err_t root_get(httpd_req_t *req) {
     bool humid_ok = (!isnan(h_in) && h_in >= 30.0f && h_in <= 60.0f);
 
     const char *note = (temp_ok && humid_ok)
-        ? "Inside conditions are within the recommended range (15\u201330\u00B0C, 30\u201360% RH)."
-        : "Inside conditions are outside the recommended range (15\u201330\u00B0C, 30\u201360% RH).";
+        ? "Inside conditions are within the recommended range (15\u201330\u00B0C, 30\u201360 %RH)."
+        : "Inside conditions are outside the recommended range (15\u201330\u00B0C, 30\u201360 %RH).";
     // Compact HTML: small CSS + simple table
     int n = snprintf(buf, sizeof(buf),
     "<!doctype html><meta charset=utf-8>"
