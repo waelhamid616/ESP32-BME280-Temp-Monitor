@@ -9,10 +9,43 @@
 
 static const char *TAG = "sms";
 
-// url_encode() must percent-encode reserved characters for application/x-www-form-urlencoded.
-// You already have/plan this helper elsewhere; we just declare it here.
-extern void url_encode(const char *in, char *out, size_t out_sz);
+/**
+ * @brief Minimal URL encoder for form fields.
+ *
+ * Encodes input string as application/x-www-form-urlencoded:
+ * - Alphanumerics and safe chars are passed through.
+ * - Spaces → '+', others → %XX hex encoding.
+ *
+ * @param[in]  in     Input string.
+ * @param[out] out    Output buffer.
+ * @param[in]  outlen Size of output buffer.
+ *
+ * @return Number of bytes written (excluding terminator).
+ */
+static int url_encode(const char *in, char *out, int outlen) {
+    static const char hex[] = "0123456789ABCDEF";
+    int o=0;
+    for (int i=0; in[i] && o<outlen-1; i++) {
+        unsigned char c=(unsigned char)in[i];
+        if ((c>='A'&&c<='Z')||(c>='a'&&c<='z')||(c>='0'&&c<='9')||c=='-'||c=='_'||c=='.'||c=='~') out[o++]=c;
+        else if (c==' ') out[o++]='+';
+        else { if (o+3>=outlen) break; out[o++]='%', out[o++]=hex[c>>4], out[o++]=hex[c&0xF]; }
+    }
+    out[o]=0; return o;
+}
 
+/**
+ * @brief Send an SMS alert via Twilio API.
+ *
+ * Builds and POSTs a form-encoded request to Twilio's
+ * /Messages.json endpoint using Basic Auth and TLS bundle.
+ * Encodes To/From/Body fields, performs the HTTP request,
+ * and checks for a 2xx response.
+ *
+ * @param[in] body  SMS text message to send.
+ *
+ * @return ESP_OK on success, error code on failure.
+ */
 esp_err_t sms_send_alert(const char *body) {
     // ------------------------------------------------------------------------
     // Build the Twilio Messages API endpoint:
@@ -28,13 +61,13 @@ esp_err_t sms_send_alert(const char *body) {
     // URL-encode all form fields for "application/x-www-form-urlencoded".
     // IMPORTANT:
     //   - In form-encoding, '+' means space, so phone numbers like +1604555...
-    //     must be encoded to %2B (your url_encode should do this).
+    //     must be encoded to %2B.
     //   - We encode To, From, and Body to be safe.
     // ------------------------------------------------------------------------
     char to_enc[64], from_enc[64], body_enc[256];
-    url_encode(CONFIG_ALERT_TO_NUMBER,     to_enc,   sizeof to_enc);    // destination number
-    url_encode(CONFIG_TWILIO_FROM_NUMBER,  from_enc, sizeof from_enc);  // your Twilio number (sender)
-    url_encode(body,                        body_enc, sizeof body_enc);  // SMS text payload
+    url_encode(CONFIG_ALERT_TO_NUMBER,     to_enc,   sizeof to_enc);      // destination number
+    url_encode(CONFIG_TWILIO_FROM_NUMBER,  from_enc, sizeof from_enc);   // Twilio number (sender)
+    url_encode(body,                        body_enc, sizeof body_enc); // SMS text payload
 
     // ------------------------------------------------------------------------
     // Build the POST body in classic HTML form format:

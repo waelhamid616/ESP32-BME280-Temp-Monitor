@@ -1,3 +1,12 @@
+/*
+ * Temperature alert evaluation (implementation).
+ * - Evaluates °C readings against warn/alert thresholds.
+ * - Enforces cooldowns with esp_timer one-shot timers (30m warn, 60m alert).
+ * - Sends SMS via sms_send_alert() when conditions are met.
+ * Author: Wael Hamid  |  Date: 2025-08-18
+ */
+
+#include "alert_eval.h"
 #include <stdio.h>
 #include <stdint.h>
 #include "esp_err.h"
@@ -30,19 +39,31 @@ static volatile bool b_tick = 0;
 static esp_timer_handle_t a_handle = NULL;  // 30-minute cooldown timer
 static esp_timer_handle_t b_handle = NULL;  // 60-minute cooldown timer
 
-// -----------------------------------------------------------------------------
-// Timer callbacks
-// Invoked by the esp_timer service when the corresponding cooldown expires.
-// Clear the flag to re-enable alerting.
-// -----------------------------------------------------------------------------
+/**
+ * @brief Cooldown expiry for warnings (30 minutes).
+ *
+ * Timer A callback: clears the warning cooldown flag to re-enable warnings.
+ *
+ * @param arg Unused.
+ */
+
 static void callback_timer_A(void *arg) { a_tick = 0; }  // Re-enable warnings
+
+/**
+ * @brief Cooldown expiry for alerts (60 minutes).
+ *
+ * Timer B callback: clears the alert cooldown flag to re-enable alerts.
+ *
+ * @param arg Unused.
+ */
 static void callback_timer_B(void *arg) { b_tick = 0; }  // Re-enable alerts
 
-// -----------------------------------------------------------------------------
-// Timer creation
-// Create the two one-shot timers (no periodic re-arming). These are started
-// on-demand when an alert is sent.
-// -----------------------------------------------------------------------------
+/**
+ * @brief Create one-shot cooldown timers.
+ *
+ * Initializes Timer A (30m) and Timer B (60m) with task-dispatched callbacks.
+ * Safe to call once before first use.
+ */
 static void timers_init(void) {
     const esp_timer_create_args_t a_args = {
         .callback = &callback_timer_A,
@@ -64,19 +85,24 @@ static void timers_init(void) {
 // Application-specific stub: send an SMS. Replace with your real function.
 extern esp_err_t sms_send_alert(const char *msg);
 
-// Thresholds (replace with your own configuration constants).
-#define WARN_LOW_C    16.5
+// Thresholds 
 #define ALERT_LOW_C   15.0
+#define WARN_LOW_C    16.5
 #define WARN_HIGH_C   28.5
 #define ALERT_HIGH_C  30.0
 
-// -----------------------------------------------------------------------------
-// Evaluate temperature and send alerts subject to cooldown rules.
-// - Warning path (30 min cooldown):   Cold < T_C <= Cold_Warn, and Hot_Warn <= T_C < Hot
-// - Alert path (60 min cooldown):     T_C <= Cold, and T_C >= Hot
-// Each time we send, start a one-shot timer; when it fires, its callback clears
-// the corresponding flag to permit future alerts.
-// -----------------------------------------------------------------------------
+/**
+ * @brief Evaluate temperature and send SMS subject to cooldowns.
+ *
+ * Sends warnings when Cold < T_C <= Cold_Warn or Hot_Warn <= T_C < Hot
+ * (30-minute cooldown). Sends alerts when T_C <= Cold or T_C >= Hot
+ * (60-minute cooldown). Starts the appropriate one-shot timer after send.
+ *
+ * @param[in] T_C Temperature in degrees Celsius.
+ *
+ * @return ESP_OK if no send was needed or after a successful send;
+ *         error code from sms_send_alert() or timer APIs on failure.
+ */
 esp_err_t sms_eval_alert(double T_C) {
 
     // Ensure timers are created before first use.
@@ -84,8 +110,8 @@ esp_err_t sms_eval_alert(double T_C) {
         timers_init();
     }
 
-    const double Cold = WARN_LOW_C;             // Low temp alert at 15.0 deg
-    const double Cold_Warn  = ALERT_LOW_C;     // Low temp warning 16.5 deg
+    const double Cold = ALERT_LOW_C ;           // Low temp alert at 15.0 deg
+    const double Cold_Warn  = WARN_LOW_C ;     // Low temp warning 16.5 deg
     const double Hot_Warn = WARN_HIGH_C;      // High Temp Warning 28.5
     const double Hot  = ALERT_HIGH_C;        // High Temp Threshold 30.0 
 
